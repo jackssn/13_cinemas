@@ -1,6 +1,8 @@
 # Cinemas
 
-[TODO. There will be project description]
+Script parses the information from [afisha](http://www.afisha.ru/msk/schedule_cinema) and gets rating from
+[kinopoisk](https://www.kinopoisk.ru/) for every movie. Then script shows in console the best 10 (default) movies with
+rating and shows.
 
 # Project Goals
 
