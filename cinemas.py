@@ -22,8 +22,8 @@ def fetch_movie_info(movie_title):
         'Content-Type': 'text/html;charset=UTF-8',
         'User-Agent': 'Agent:Mozilla/5.0 (Windows NT 6.1; WOW64))'
     }
-    r = requests.get('https://www.kinopoisk.ru/index.php', headers=headers, params=payload)
-    if r.status_code != 200:
+    response = requests.get('https://www.kinopoisk.ru/index.php', headers=headers, params=payload)
+    if response.status_code != 200:
         return {}
     film_soup = BeautifulSoup(r.text, 'html5lib')
     movie_info = {}
