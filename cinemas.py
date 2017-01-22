@@ -59,8 +59,6 @@ if __name__ == '__main__':
     movies_info = []
     movies_titles_list = get_film_list_from_afisha_page()
     for number, movie_title in enumerate(movies_titles_list, start=1):
-        if number == 10:
-            break
         payload = {'first': 'yes', 'kp_query': movie_title}
         headers = {
             'Accept': '*/*',
