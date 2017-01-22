@@ -12,7 +12,7 @@ SHOWS_LIMIT = 200
 def check_positive(value):
     ivalue = int(value)
     if ivalue <= 0:
-         raise argparse.ArgumentTypeError("{} is an invalid positive int value".format(value))
+        raise argparse.ArgumentTypeError("{} is an invalid positive int value".format(value))
     return ivalue
 
 
@@ -23,20 +23,9 @@ def get_film_list_from_afisha_page():
     return [x.a.text.strip() for x in films_list]
 
 
-def fetch_movie_info(movie_title):
-    payload = {'first': 'yes', 'kp_query': movie_title}
-    headers = {
-        'Accept': '*/*',
-        'Accept-Encoding': 'UTF-8',
-        'Accept-Language': 'en-US,en;q=0.8,ru;q=0.6',
-        'Content-Type': 'text/html;charset=UTF-8',
-        'User-Agent': 'Agent:Mozilla/5.0 (Windows NT 6.1; WOW64))'
-    }
-    response = requests.get('https://www.kinopoisk.ru/index.php', headers=headers, params=payload)
-    if response.status_code != 200:
-        return None
-    film_soup = BeautifulSoup(response.text, 'html5lib')
-    movie_info = {'title': movie_title}
+def fetch_movie_info(response_text):
+    film_soup = BeautifulSoup(response_text, 'html5lib')
+    movie_info = {}
     try:
         movie_info['rating'] = float(film_soup.find("span", {"class": "rating_ball"}).text)
     except AttributeError:
@@ -70,13 +59,23 @@ if __name__ == '__main__':
     movies_info = []
     movies_titles_list = get_film_list_from_afisha_page()
     for number, movie_title in enumerate(movies_titles_list, start=1):
-        if number == 5:
+        if number == 10:
             break
-        current_movie_dict = fetch_movie_info(movie_title)
-        if current_movie_dict is None:
-            print("Error parsing {}/{} movie".format(number, len(movies_titles_list)))
-        else:
-            movies_info.append(current_movie_dict)
+        payload = {'first': 'yes', 'kp_query': movie_title}
+        headers = {
+            'Accept': '*/*',
+            'Accept-Encoding': 'UTF-8',
+            'Accept-Language': 'en-US,en;q=0.8,ru;q=0.6',
+            'Content-Type': 'text/html;charset=UTF-8',
+            'User-Agent': 'Agent:Mozilla/5.0 (Windows NT 6.1; WOW64))'
+        }
+        response = requests.get('https://www.kinopoisk.ru/index.php', headers=headers, params=payload)
+        if response.status_code == 200:
+            movie_dict = fetch_movie_info(response.text)
+            movie_dict['title'] = movie_title
+            movies_info.append(movie_dict)
             print("{}/{} movie parsed".format(number, len(movies_titles_list)))
+        else:
+            print("Error parsing {}/{} movie".format(number, len(movies_titles_list)))
         time.sleep(TIMEOUT)
     output_movies_to_console(movies_info, movies_quantity)
