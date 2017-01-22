@@ -1,9 +1,19 @@
 import requests
 from bs4 import BeautifulSoup
 import time
+import argparse
+import re
 
 
 TIMEOUT = 11  # seconds
+SHOWS_LIMIT = 200
+
+
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+         raise argparse.ArgumentTypeError("{} is an invalid positive int value".format(value))
+    return ivalue
 
 
 def get_film_list_from_afisha_page():
@@ -24,40 +34,49 @@ def fetch_movie_info(movie_title):
     }
     response = requests.get('https://www.kinopoisk.ru/index.php', headers=headers, params=payload)
     if response.status_code != 200:
-        return {}
-    film_soup = BeautifulSoup(r.text, 'html5lib')
-    movie_info = {}
-    movie_info['title'] = movie_title
+        return None
+    film_soup = BeautifulSoup(response.text, 'html5lib')
+    movie_info = {'title': movie_title}
     try:
         movie_info['rating'] = float(film_soup.find("span", {"class": "rating_ball"}).text)
     except AttributeError:
         movie_info['rating'] = 0
     try:
-        movie_info['shows'] = film_soup.find("div", {"class": "shows"}).a.text
+        shows_str = film_soup.find("div", {"class": "shows"}).a.text
+        movie_info['shows'] = re.sub("[^0-9]", "", shows_str)
     except AttributeError:
         movie_info['shows'] = 0
     return movie_info
 
 
 def output_movies_to_console(movies, quantity):
-    sorted_by_rating_movie_list = sorted(movies, key=lambda k: k['rating'], reverse=True)
-    sorted_by_rating_movie_list_without_zero_shows = [x for x in sorted_by_rating_movie_list if x['shows'] != 0]
-    for number, movie in enumerate(sorted_by_rating_movie_list_without_zero_shows, start=1,):
-        print('%s) "%s" has rating %s and %s' % (number, movie['title'], movie['rating'], movie['shows']))
+    for number, movie in enumerate(sort_movie_list_by_rating(movies), start=1,):
+        print('{} "{}" has rating {} and {} shows'.format(number, movie['title'], movie['rating'], movie['shows']))
         if number == quantity:
             break
 
 
+def sort_movie_list_by_rating(movies):
+    sorted_by_rating_movie_list = sorted(movies, key=lambda k: k['rating'], reverse=True)
+    return [x for x in sorted_by_rating_movie_list if int(x['shows']) > SHOWS_LIMIT]
+
+
 if __name__ == '__main__':
-    movies_quantity = 10
+    parser = argparse.ArgumentParser(description='Movies quantity')
+    parser.add_argument('movies_quantity', type=check_positive, help='How many movies to show')
+    args = parser.parse_args()
+
+    movies_quantity = args.movies_quantity
     movies_info = []
     movies_titles_list = get_film_list_from_afisha_page()
     for number, movie_title in enumerate(movies_titles_list, start=1):
+        if number == 5:
+            break
         current_movie_dict = fetch_movie_info(movie_title)
-        if current_movie_dict:
-            movies_info.append(current_movie_dict)
-            print("%d/%d movie parsed" % (number, len(movies_titles_list)))
+        if current_movie_dict is None:
+            print("Error parsing {}/{} movie".format(number, len(movies_titles_list)))
         else:
-            print("Error parsing %d/%d movie" % (number, len(movies_titles_list)))
+            movies_info.append(current_movie_dict)
+            print("{}/{} movie parsed".format(number, len(movies_titles_list)))
         time.sleep(TIMEOUT)
     output_movies_to_console(movies_info, movies_quantity)
